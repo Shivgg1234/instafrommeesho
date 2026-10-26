@@ -1,26 +1,51 @@
-const { prisma }=require("../db");
-function createUser(data){
-  return prisma.user.create({ data });
+const prisma = require("../db");
+
+const userSummary = { id: true, username: true, fullname: true };
+
+function createUser(data) { return prisma.user.create({ data }); }
+
+function listUsers({ where, orderBy, skip, take }) {
+  return prisma.$transaction([
+    prisma.user.findMany({
+      where, orderBy, skip, take,
+      include: { _count: { select: { posts: true, likes: true } } },
+    }),
+    prisma.user.count({ where }),
+  ]);
 }
-function listUsers(){
-  return prisma.user.findMany();
-}
-function getUserById(id){
-  return prisma.user.findUnique({ where: { id } });
-}
-function updateUser(id, data){
-  return prisma.user.update({
+
+function getUserById(id) {
+  return prisma.user.findUnique({
     where: { id },
-    data,
+    include: { _count: { select: { posts: true, likes: true } } },
   });
 }
-function deleteUser(id){
-  return prisma.user.delete({ where: { id } });
+
+function userExists(id) { return prisma.user.findUnique({ where: { id }, select: { id: true } }); }
+function updateUser(id, data) {
+  if (!Object.keys(data).length) return getUserById(id);
+  return prisma.user.update({ where: { id }, data });
 }
-module.exports = {
-  createUser,
-  listUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-};
+function deleteUser(id) { return prisma.user.delete({ where: { id } }); }
+
+function listUserPosts(userId, skip, take) {
+  return prisma.$transaction([
+    prisma.post.findMany({
+      where: { authorId: userId }, orderBy: { createdAt: "desc" }, skip, take,
+      include: { _count: { select: { likes: true } } },
+    }),
+    prisma.post.count({ where: { authorId: userId } }),
+  ]);
+}
+function listLikedPosts(userId, skip, take) {
+  const where = { likes: { some: { userId } } };
+  return prisma.$transaction([
+    prisma.post.findMany({
+      where, orderBy: { createdAt: "desc" }, skip, take,
+      include: { author: { select: userSummary }, _count: { select: { likes: true } } },
+    }),
+    prisma.post.count({ where }),
+  ]);
+}
+
+module.exports = { createUser, listUsers, getUserById, userExists, updateUser, deleteUser, listUserPosts, listLikedPosts, userSummary };

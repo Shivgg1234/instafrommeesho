@@ -1,2 +1,22 @@
-/lab-13/solution.md
-/generated/prisma
+# Dependencies
+node_modules/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Generated Prisma Client
+generated/prisma/
+node_modules/.prisma/
+
+# Operating-system files
+.DS_Store
+
+# Logs and test output
+*.log
+coverage/
+
+# Local scratch files
+tmp/
+temp/
